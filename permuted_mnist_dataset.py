@@ -24,20 +24,20 @@ class PermutedMnistDataset(torch.utils.data.Dataset):
             , transforms.Normalize((0.1307,), (0.3081,))
         ])
         , duplicates_multiplier: int=4
-        , k: int=8
+        , head_size: int=8
         , seed: int=42
     ):
         
         np.random.seed(seed)
         
         self.duplicates_multiplier = duplicates_multiplier
-        self.k = k
-        self.I = np.eye(k)
+        self.head_size = head_size
+        self.I = np.eye(head_size)
         
         ds = datasets.MNIST(
             path
-            , download=True
-            , train=True
+            , download=download
+            , train=train
             , transform=transform
         )
         
@@ -48,7 +48,7 @@ class PermutedMnistDataset(torch.utils.data.Dataset):
         self.min_len = min([len(digit_ds) for digit_ds in self.binned_dataset.values()])
             
     def __len__(self):
-        return len(self.min_len * self.duplicates_multiplier)
+        return self.min_len * self.duplicates_multiplier
 
     def __getitem__(self, idx):
         if torch.is_tensor(idx):
@@ -61,19 +61,21 @@ class PermutedMnistDataset(torch.utils.data.Dataset):
         X = []
         Y = []
         for i in idx:
-            perm = np.random.permutation(np.arange(self.k, dtype=int))
-            y = self.I[perm]
+            perm = np.random.permutation(np.arange(self.head_size, dtype=int))
+            y = torch.as_tensor(self.I[perm])
             
             x = []
             for pi in perm:
                 x_i = self.binned_dataset[pi][i]
                 x.append(x_i)
+
+            x = torch.stack(x)
             
             X.append(x)
             Y.append(y)
 
-        X = torch.tensor(X)
-        Y = torch.tensor(Y)
+        X = torch.stack(X)
+        Y = torch.stack(Y)
             
         if len(X) == 1 and len(Y) == 1:
             X = X[0]

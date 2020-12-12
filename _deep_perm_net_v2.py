@@ -44,7 +44,7 @@ class DeepPermNet_v2(nn.Module):
         """
             X - Torch tensor of shape (batch_size, head_size, color_channels, height, width)
         """
-        
+
         features = self.feature_extractor(X)
         permutations = self.permutation_extractor(features)
         
@@ -63,33 +63,33 @@ class DeepPermNet_v2(nn.Module):
                 
         return utils.MultiHeadFeatureExtractor(feature_extractor, feature_size)
     
-    def _setup_permutation_extractor_v1(self, head_size: int, feature_size: int):
+    def _setup_permutation_extractor_v1(self, head_size: int, feature_size: int, eps: float):
         return nn.Sequential(
-            nn.Linear(feature_size * head_size, 4096)
+            nn.Linear(feature_size * head_size, 64)
             , nn.ReLU()
-            , nn.Linear(4096, head_size ** 2)
+            , nn.Linear(64, head_size ** 2)
             , nn.ReLU()
             , utils.Reshape((head_size,) * 2)
-            , sinkhorn.SinkhornNormalizer()
+            , sinkhorn.SinkhornNormalizer(eps)
             , sinkhorn.SinkhornOptimizer_v1()
         )
     
-    def _setup_permutation_extractor_v2(self, head_size: int, feature_size: int, entropy_reg: float):
+    def _setup_permutation_extractor_v2(self, head_size: int, feature_size: int, entropy_reg: float, eps: float):
         return nn.Sequential(
-            nn.Linear(feature_size * head_size, 4096)
+            nn.Linear(feature_size * head_size, 64)
             , nn.ReLU()
-            , nn.Linear(4096, head_size ** 2)
+            , nn.Linear(64, head_size ** 2)
             , nn.ReLU()
             , utils.Reshape((head_size,) * 2)
-            , sinkhorn.SinkhornNormalizer()
+            , sinkhorn.SinkhornNormalizer(eps)
             , sinkhorn.SinkhornOptimizer_v2(head_size, entropy_reg)
         )
     
     def _setup_permutation_extractor_v3(self, head_size: int, feature_size: int):
         return nn.Sequential(
-            nn.Linear(feature_size * head_size, 4096)
+            nn.Linear(feature_size * head_size, 64)
             , nn.ReLU()
-            , nn.Linear(4096, head_size ** 2)
+            , nn.Linear(64, head_size ** 2)
             , nn.ReLU()
             , utils.Reshape((head_size,) * 2)
             , sinkhorn.SinkhornOptimizer_v3()

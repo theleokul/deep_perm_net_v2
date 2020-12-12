@@ -30,7 +30,7 @@ class MNISTClassifier(nn.Module):
         self.dropout2d = nn.Dropout2d(p=0.2)
         self.fc1 = nn.Linear(32 * 4 * 4, 128) 
         self.fc2 = nn.Linear(128, 64) 
-        self.out = nn.Linear(64, 10) 
+        self.out = nn.Linear(64, 10)  # Maybe can be removed to make feature space bigger
         
     def forward(self, x):
         out = self.cnn_1(x)
@@ -43,7 +43,7 @@ class MNISTClassifier(nn.Module):
         out = self.dropout2d(out)
         out = self.maxpool(out)
         
-        out = out.view(out.size(0), -1)
+        out = out.reshape(out.size(0), -1)
         out = self.fc1(out)
         out = self.dropout(out)
         out = self.fc2(out)

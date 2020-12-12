@@ -26,13 +26,14 @@ class Reshape(nn.Module):
 
 class MultiHeadFeatureExtractor(nn.Module):
     def __init__(self, feature_extractor: nn.Module, feature_size: int):
+        super().__init__()
         self.feature_extractor = feature_extractor
         self.feature_size = feature_size
         
     def forward(self, X: torch.Tensor):
-        batch_size, head_size = X.shape[:2]
-        X = X.reshape(batch_size * head_size, -1)
-        
+        batch_size, head_size, channel_size, height, width = X.shape
+        X = X.reshape(batch_size * head_size, channel_size, height, width)
+
         output = self.feature_extractor(X)
         output = output.reshape(batch_size, head_size * self.feature_size)
 

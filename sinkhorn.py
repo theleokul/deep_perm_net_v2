@@ -26,7 +26,7 @@ class SinkhornNormalizer(nn.Module):
             x = x - torch.logsumexp(x, dim=-1, keepdims=True)
             
         # add a small offset ’eps’ to avoid numerical errors due to exp()
-        return torch.exp(x) + eps
+        return torch.exp(x) + self.eps
 
 
 class SinkhornOptimizer_v1(nn.Module):
