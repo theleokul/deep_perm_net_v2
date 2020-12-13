@@ -14,12 +14,21 @@ from cvxpylayers.torch.cvxpylayer import CvxpyLayer
 
 
 class SinkhornNormalizer(nn.Module):
-    def __init__(self, eps: float):
+    """
+        Numerically stable version of making matrix to double stochastic
+        https://www.groundai.com/project/learning-permutations-with-sinkhorn-policy-gradient/1#S4.SS2
+    """
+
+    def __init__(self, eps: float=1e-3, L: int=10, tau: float=0.05):
         super().__init__()
         self.eps = eps
+        self.tau = tau
+        self.L = L
             
     def forward(self, x):
-        for _ in range(1000):
+        x /= self.tau
+
+        for _ in range(self.L):
             # row normalization
             x = x - torch.logsumexp(x, dim=-2, keepdims=True)
             # column normalization
