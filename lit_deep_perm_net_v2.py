@@ -22,6 +22,41 @@ import lit_mnist_classifier
 
 
 class LitDeepPermNet_v2(deep_perm_net_v2.DeepPermNet_v2, pl.LightningModule):
+    def __init__(
+        self
+        , feature_extractor: nn.Module
+        , feature_size: int
+        , head_size: int
+        , batch_size: int
+        , lr: float
+        , mnist_path: str
+        , download: bool
+        , duplicates_multiplier: int
+        , seed: int
+        , **kwargs
+    ):
+
+        super().__init__(feature_extractor, feature_size, head_size, **kwargs)
+        self.batch_size = batch_size
+        self.download = download
+        self.feature_size = feature_size
+        self.head_size = head_size
+        self.lr = lr
+        self.duplicates_multiplier = duplicates_multiplier
+        self.seed = seed
+        self.mnist_path = mnist_path
+        self.save_hyperparameters(
+            {
+                'batch_size': batch_size
+                , 'feature_size': feature_size
+                , 'head_size': head_size
+                , 'lr': lr
+                , 'duplicates_multiplier': duplicates_multiplier
+                , 'seed': seed
+                , **kwargs
+            }
+        )
+
     def training_step(self, batch, batch_idx):
         x, y = batch
         y_hat = self(x)
@@ -57,26 +92,25 @@ class LitDeepPermNet_v2(deep_perm_net_v2.DeepPermNet_v2, pl.LightningModule):
         }, prog_bar=True)
 
     def configure_optimizers(self):
-        return torch.optim.Adam(filter(lambda p: p.requires_grad, self.parameters()), lr=0.003)
+        return torch.optim.Adam(filter(lambda p: p.requires_grad, self.parameters()), lr=self.lr)
 
     def train_dataloader(self):
         train_dataset = pmnist.PermutedMnistDataset(
-            'mnist'
-            , download=True
+            self.mnist_path
+            , download=self.download
             , train=True
             , transform=transforms.Compose([
                 transforms.ToTensor()
                 , transforms.Normalize((0.1307,), (0.3081,))
             ])
-            , duplicates_multiplier=2
-            , head_size=10
-            , seed=42
+            , duplicates_multiplier=self.duplicates_multiplier
+            , head_size=self.head_size
+            , seed=self.seed
         )
 
         train_loader = torch.utils.data.DataLoader(
             train_dataset
-            , batch_size=8
-            # , num_workers=1
+            , batch_size=self.batch_size
             , shuffle=True
         )
 
@@ -84,22 +118,21 @@ class LitDeepPermNet_v2(deep_perm_net_v2.DeepPermNet_v2, pl.LightningModule):
 
     def val_dataloader(self):
         val_dataset = pmnist.PermutedMnistDataset(
-            'mnist'
-            , download=True
+            self.mnist_path
+            , download=self.download
             , train=False
             , transform=transforms.Compose([
                 transforms.ToTensor()
                 , transforms.Normalize((0.1307,), (0.3081,))
             ])
-            , duplicates_multiplier=2
-            , head_size=10
-            , seed=42
+            , duplicates_multiplier=self.duplicates_multiplier
+            , head_size=self.head_size
+            , seed=self.seed
         )
 
         val_loader = torch.utils.data.DataLoader(
             val_dataset
-            , batch_size=8
-            # , num_workers=1
+            , batch_size=self.batch_size
         )
 
         return val_loader
@@ -109,14 +142,22 @@ if __name__ == "__main__":
     feature_extractor = lit_mnist_classifier.LitMNISTClassifier.load_from_checkpoint(
         checkpoint_path='logs_mnist_clf/version_1/checkpoints/epoch=14-avg_val_loss=0.0394-avg_val_acc=0.9876.ckpt'
     )
+
     model = LitDeepPermNet_v2(
-        feature_extractor
+        feature_extractor=feature_extractor
         , feature_size=10
         , head_size=10
+        , batch_size=8
+        , lr=0.003
+        , mnist_path='mnist'
+        , download=False
+        , duplicates_multiplier=2
+        , seed=42
         , disable_feature_extractor_training=True
         , permutation_extractor_version='v1'
-        , eps=1e-3
+        , bottleneck_features_num=64
     )
+    
     logger = pl.loggers.TensorBoardLogger(save_dir='./logs_deep_perm_net_v2', name='')
     checkpoint_callback = pl.callbacks.ModelCheckpoint(
         monitor='avg_val_loss'
