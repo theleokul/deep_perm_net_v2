@@ -27,6 +27,7 @@ class LitDeepPermNet_v2(deep_perm_net_v2.DeepPermNet_v2, pl.LightningModule):
         , feature_extractor: nn.Module
         , feature_size: int
         , head_size: int
+        , loss_func: str
         , batch_size: int
         , lr: float
         , mnist_path: str
@@ -37,6 +38,14 @@ class LitDeepPermNet_v2(deep_perm_net_v2.DeepPermNet_v2, pl.LightningModule):
     ):
 
         super().__init__(feature_extractor, feature_size, head_size, **kwargs)
+
+        if loss_func.lower() == 'l1':
+            self.loss_func = F.l1_loss
+        elif loss_func.lower() == 'l2':
+            self.loss_func = F.mse_loss
+        else:
+            raise NotImplementedError()
+    
         self.batch_size = batch_size
         self.download = download
         self.feature_size = feature_size
@@ -47,7 +56,8 @@ class LitDeepPermNet_v2(deep_perm_net_v2.DeepPermNet_v2, pl.LightningModule):
         self.mnist_path = mnist_path
         self.save_hyperparameters(
             {
-                'batch_size': batch_size
+                'loss_func': loss_func.lower()
+                , 'batch_size': batch_size
                 , 'feature_size': feature_size
                 , 'head_size': head_size
                 , 'lr': lr
@@ -60,7 +70,7 @@ class LitDeepPermNet_v2(deep_perm_net_v2.DeepPermNet_v2, pl.LightningModule):
     def training_step(self, batch, batch_idx):
         x, y = batch
         y_hat = self(x)
-        loss = F.l1_loss(y_hat.flatten(1), y.flatten(1))
+        loss = self.loss_func(y_hat.flatten(1), y.flatten(1))
         self.log('train_loss', loss)
         return loss
 
@@ -72,7 +82,7 @@ class LitDeepPermNet_v2(deep_perm_net_v2.DeepPermNet_v2, pl.LightningModule):
         x, y = batch
         y_hat = self(x)
 
-        loss = F.l1_loss(y_hat.flatten(1), y.flatten(1))
+        loss = self.loss_func(y_hat.flatten(1), y.flatten(1))
 
         output = {
             'val_loss': loss
@@ -147,6 +157,7 @@ if __name__ == "__main__":
         feature_extractor=feature_extractor
         , feature_size=10
         , head_size=10
+        , loss_func='l1'
         , batch_size=8
         , lr=0.003
         , mnist_path='mnist'
