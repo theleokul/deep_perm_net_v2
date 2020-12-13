@@ -63,33 +63,54 @@ class DeepPermNet_v2(nn.Module):
                 
         return utils.MultiHeadFeatureExtractor(feature_extractor, feature_size)
     
-    def _setup_permutation_extractor_v1(self, head_size: int, feature_size: int, eps: float):
+    def _setup_permutation_extractor_v1(
+        self
+        , head_size: int
+        , feature_size: int
+        , bottleneck_features_num: int
+        , **norm_kwargs
+    ):
+
         return nn.Sequential(
-            nn.Linear(feature_size * head_size, 64)
+            nn.Linear(feature_size * head_size, bottleneck_features_num)
             , nn.ReLU()
-            , nn.Linear(64, head_size ** 2)
+            , nn.Linear(bottleneck_features_num, head_size ** 2)
             , nn.ReLU()
             , utils.Reshape((head_size,) * 2)
-            , sinkhorn.SinkhornNormalizer(eps)
+            , sinkhorn.SinkhornNormalizer(**norm_kwargs)
             , sinkhorn.SinkhornOptimizer_v1()
         )
     
-    def _setup_permutation_extractor_v2(self, head_size: int, feature_size: int, entropy_reg: float, eps: float):
+    def _setup_permutation_extractor_v2(
+        self
+        , head_size: int
+        , feature_size: int
+        , entropy_reg: float
+        , bottleneck_features_num: int
+        , **norm_kwargs
+    ):
+
         return nn.Sequential(
-            nn.Linear(feature_size * head_size, 64)
+            nn.Linear(feature_size * head_size, bottleneck_features_num)
             , nn.ReLU()
-            , nn.Linear(64, head_size ** 2)
+            , nn.Linear(bottleneck_features_num, head_size ** 2)
             , nn.ReLU()
             , utils.Reshape((head_size,) * 2)
-            , sinkhorn.SinkhornNormalizer(eps)
+            , sinkhorn.SinkhornNormalizer(**norm_kwargs)
             , sinkhorn.SinkhornOptimizer_v2(head_size, entropy_reg)
         )
     
-    def _setup_permutation_extractor_v3(self, head_size: int, feature_size: int):
+    def _setup_permutation_extractor_v3(
+        self
+        , head_size: int
+        , feature_size: int
+        , bottleneck_features_num: int
+    ):
+
         return nn.Sequential(
-            nn.Linear(feature_size * head_size, 64)
+            nn.Linear(feature_size * head_size, bottleneck_features_num)
             , nn.ReLU()
-            , nn.Linear(64, head_size ** 2)
+            , nn.Linear(bottleneck_features_num, head_size ** 2)
             , nn.ReLU()
             , utils.Reshape((head_size,) * 2)
             , sinkhorn.SinkhornOptimizer_v3()
