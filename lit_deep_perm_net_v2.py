@@ -83,9 +83,11 @@ class LitDeepPermNet_v2(deep_perm_net_v2.DeepPermNet_v2, pl.LightningModule):
         y_hat = self(x)
 
         loss = self.loss_func(y_hat.flatten(1), y.flatten(1))
+        # acc = sinkhorn.get_mean_accuracy(y_hat, y)
 
         output = {
             'val_loss': loss
+            # , 'val_acc': acc
         }
         self.log_dict(output, prog_bar=True)
 
@@ -93,12 +95,15 @@ class LitDeepPermNet_v2(deep_perm_net_v2.DeepPermNet_v2, pl.LightningModule):
 
     def validation_epoch_end(self, outputs):
         losses = []
+        accs = []
 
         for o in outputs:
             losses.append(o['val_loss'])
+            # accs.append(o['val_acc'])
 
         self.log_dict({
             'avg_val_loss': torch.as_tensor(losses).mean()
+            # , 'avg_val_acc': torch.as_tensor(accs).mean()
         }, prog_bar=True)
 
     def configure_optimizers(self):
@@ -153,13 +158,15 @@ if __name__ == "__main__":
         checkpoint_path='logs_mnist_clf/version_1/checkpoints/epoch=14-avg_val_loss=0.0394-avg_val_acc=0.9876.ckpt'
     )
 
+    print(torch.__version__)
+
     model = LitDeepPermNet_v2(
         feature_extractor=feature_extractor
         , feature_size=10
         , head_size=10
         , loss_func='l1'
         , batch_size=8
-        , lr=0.003
+        , lr=0.0003
         , mnist_path='mnist'
         , download=False
         , duplicates_multiplier=2
@@ -180,5 +187,8 @@ if __name__ == "__main__":
         max_epochs=5
         , checkpoint_callback=checkpoint_callback
         , logger=logger
+        , gradient_clip_val=0.5
+        # , precision=16  # On GPU can be beneficial
+        , track_grad_norm=2
     )
     trainer.fit(model)
