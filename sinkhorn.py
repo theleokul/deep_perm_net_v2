@@ -45,6 +45,7 @@ class SinkhornOptimizer_v1(nn.Module):
     
 class SinkhornOptimizer_v2(nn.Module):
     def __init__(self, head_size: int, entropy_reg: float):
+        super().__init__()
         e = np.ones((head_size, 1))
         Q = cp.Parameter((head_size, head_size))
         P_hat = cp.Variable((head_size, head_size))
@@ -69,6 +70,7 @@ class SinkhornOptimizer_v2(nn.Module):
     
 class SinkhornOptimizer_v3(nn.Module):
     def __init__(self, head_size: int, entropy_reg: float):
+        super().__init__()
         # Generate data.
         e = np.ones((head_size, 1))
         M = cp.Parameter((head_size, head_size))

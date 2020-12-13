@@ -26,10 +26,12 @@ class PermutedMnistDataset(torch.utils.data.Dataset):
         , duplicates_multiplier: int=4
         , head_size: int=8
         , seed: int=42
+        , move_data_to_cuda: bool=False
     ):
         
         np.random.seed(seed)
         
+        self.move_data_to_cuda = move_data_to_cuda
         self.duplicates_multiplier = duplicates_multiplier
         self.head_size = head_size
         self.I = np.eye(head_size)
@@ -80,5 +82,9 @@ class PermutedMnistDataset(torch.utils.data.Dataset):
         if len(X) == 1 and len(Y) == 1:
             X = X[0]
             Y = Y[0]
+
+        if self.move_data_to_cuda:
+            X = X.cuda()
+            Y = Y.cuda()
             
         return X, Y

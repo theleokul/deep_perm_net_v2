@@ -110,18 +110,18 @@ class LitMNISTClassifier(pl.LightningModule):
         return val_loader
         
 
-if __name__ == "__main__":
-    model = LitMNISTClassifier()
-    logger = pl.loggers.TensorBoardLogger(save_dir='./logs_mnist_clf', name='')
-    checkpoint_callback = pl.callbacks.ModelCheckpoint(
-        monitor='avg_val_acc'
-        , save_top_k=1
-        , mode='max'
-        , filepath=str(Path(logger.log_dir, 'checkpoints', '{epoch}-{avg_val_loss:.4f}-{avg_val_acc:.4f}'))
-    )
-    trainer = pl.Trainer(
-        max_epochs=15
-        , checkpoint_callback=checkpoint_callback
-        , logger=logger
-    )
-    trainer.fit(model)
+# if __name__ == "__main__":
+#     model = LitMNISTClassifier()
+#     logger = pl.loggers.TensorBoardLogger(save_dir='./logs_mnist_clf', name='')
+#     checkpoint_callback = pl.callbacks.ModelCheckpoint(
+#         monitor='avg_val_acc'
+#         , save_top_k=1
+#         , mode='max'
+#         , filepath=str(Path(logger.log_dir, 'checkpoints', '{epoch}-{avg_val_loss:.4f}-{avg_val_acc:.4f}'))
+#     )
+#     trainer = pl.Trainer(
+#         max_epochs=15
+#         , checkpoint_callback=checkpoint_callback
+#         , logger=logger
+#     )
+#     trainer.fit(model)

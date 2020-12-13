@@ -34,6 +34,7 @@ class LitDeepPermNet_v2(deep_perm_net_v2.DeepPermNet_v2, pl.LightningModule):
         , download: bool
         , duplicates_multiplier: int
         , seed: int
+        , move_data_to_cuda: bool
         , **kwargs
     ):
 
@@ -46,6 +47,7 @@ class LitDeepPermNet_v2(deep_perm_net_v2.DeepPermNet_v2, pl.LightningModule):
         else:
             raise NotImplementedError()
     
+        self.move_data_to_cuda = move_data_to_cuda
         self.batch_size = batch_size
         self.download = download
         self.feature_size = feature_size
@@ -70,7 +72,7 @@ class LitDeepPermNet_v2(deep_perm_net_v2.DeepPermNet_v2, pl.LightningModule):
     def training_step(self, batch, batch_idx):
         x, y = batch
         y_hat = self(x)
-        loss = self.loss_func(y_hat.flatten(1), y.flatten(1))
+        loss = self.loss_func(y_hat.flatten(1), y.flatten(1)).type(torch.float32)
         self.log('train_loss', loss)
         return loss
 
@@ -82,7 +84,7 @@ class LitDeepPermNet_v2(deep_perm_net_v2.DeepPermNet_v2, pl.LightningModule):
         x, y = batch
         y_hat = self(x)
 
-        loss = self.loss_func(y_hat.flatten(1), y.flatten(1))
+        loss = self.loss_func(y_hat.flatten(1), y.flatten(1)).type(torch.float32)
         # acc = sinkhorn.get_mean_accuracy(y_hat, y)
 
         output = {
@@ -121,6 +123,7 @@ class LitDeepPermNet_v2(deep_perm_net_v2.DeepPermNet_v2, pl.LightningModule):
             , duplicates_multiplier=self.duplicates_multiplier
             , head_size=self.head_size
             , seed=self.seed
+            , move_data_to_cuda=self.move_data_to_cuda
         )
 
         train_loader = torch.utils.data.DataLoader(
@@ -143,6 +146,7 @@ class LitDeepPermNet_v2(deep_perm_net_v2.DeepPermNet_v2, pl.LightningModule):
             , duplicates_multiplier=self.duplicates_multiplier
             , head_size=self.head_size
             , seed=self.seed
+            , move_data_to_cuda=self.move_data_to_cuda
         )
 
         val_loader = torch.utils.data.DataLoader(
@@ -153,42 +157,45 @@ class LitDeepPermNet_v2(deep_perm_net_v2.DeepPermNet_v2, pl.LightningModule):
         return val_loader
         
 
-if __name__ == "__main__":
-    feature_extractor = lit_mnist_classifier.LitMNISTClassifier.load_from_checkpoint(
-        checkpoint_path='logs_mnist_clf/version_1/checkpoints/epoch=14-avg_val_loss=0.0394-avg_val_acc=0.9876.ckpt'
-    )
+# if __name__ == "__main__":
+#     feature_extractor = lit_mnist_classifier.LitMNISTClassifier.load_from_checkpoint(
+#         checkpoint_path='logs_mnist_clf/version_1/checkpoints/epoch=14-avg_val_loss=0.0394-avg_val_acc=0.9876.ckpt'
+#     )
+#     feature_extractor = feature_extractor.float()
 
-    print(torch.__version__)
+#     print(torch.__version__)
 
-    model = LitDeepPermNet_v2(
-        feature_extractor=feature_extractor
-        , feature_size=10
-        , head_size=10
-        , loss_func='l1'
-        , batch_size=8
-        , lr=0.0003
-        , mnist_path='mnist'
-        , download=False
-        , duplicates_multiplier=2
-        , seed=42
-        , disable_feature_extractor_training=True
-        , permutation_extractor_version='v1'
-        , bottleneck_features_num=64
-    )
+#     model = LitDeepPermNet_v2(
+#         feature_extractor=feature_extractor
+#         , feature_size=10
+#         , head_size=10
+#         , loss_func='l2'
+#         , batch_size=16
+#         , lr=0.0003
+#         , mnist_path='mnist'
+#         , download=False
+#         , duplicates_multiplier=2
+#         , seed=42
+#         , disable_feature_extractor_training=True
+#         , permutation_extractor_version='v2'
+#         , bottleneck_features_num=64
+#         , cuda=True
+#     )
     
-    logger = pl.loggers.TensorBoardLogger(save_dir='./logs_deep_perm_net_v2', name='')
-    checkpoint_callback = pl.callbacks.ModelCheckpoint(
-        monitor='avg_val_loss'
-        , save_top_k=1
-        , mode='min'
-        , filepath=str(Path(logger.log_dir, 'checkpoints', '{epoch}-{avg_val_loss:.4f}-{avg_val_acc:.4f}'))
-    )
-    trainer = pl.Trainer(
-        max_epochs=5
-        , checkpoint_callback=checkpoint_callback
-        , logger=logger
-        , gradient_clip_val=0.5
-        # , precision=16  # On GPU can be beneficial
-        , track_grad_norm=2
-    )
-    trainer.fit(model)
+#     logger = pl.loggers.TensorBoardLogger(save_dir='./logs_deep_perm_net_v2', name='')
+#     checkpoint_callback = pl.callbacks.ModelCheckpoint(
+#         monitor='avg_val_loss'
+#         , save_top_k=1
+#         , mode='min'
+#         , filepath=str(Path(logger.log_dir, 'checkpoints', '{epoch}-{avg_val_loss:.4f}'))
+#     )
+#     trainer = pl.Trainer(
+#         max_epochs=5
+#         , checkpoint_callback=checkpoint_callback
+#         , logger=logger
+#         , gradient_clip_val=0.5
+#         # , precision=16  # On GPU can be beneficial
+#         , track_grad_norm=2
+#         , gpus=[0]
+#     )
+#     trainer.fit(model)
