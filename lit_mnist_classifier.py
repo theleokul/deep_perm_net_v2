@@ -112,7 +112,7 @@ class LitMNISTClassifier(pl.LightningModule):
 
 if __name__ == "__main__":
     model = LitMNISTClassifier()
-    logger = pl.loggers.TensorBoardLogger(save_dir='./logs', name='')
+    logger = pl.loggers.TensorBoardLogger(save_dir='./logs_mnist_clf', name='')
     checkpoint_callback = pl.callbacks.ModelCheckpoint(
         monitor='avg_val_acc'
         , save_top_k=1
