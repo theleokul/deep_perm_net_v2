@@ -35,6 +35,7 @@ class LitDeepPermNet_v2(deep_perm_net_v2.DeepPermNet_v2, pl.LightningModule):
         , duplicates_multiplier: int
         , seed: int
         , move_data_to_cuda: bool
+        , use_binary_optimization_accuracy_metric: bool
         , transform: Callable = transforms.Compose([
             transforms.ToTensor()
             , transforms.Normalize((0.1307,), (0.3081,))
@@ -51,6 +52,7 @@ class LitDeepPermNet_v2(deep_perm_net_v2.DeepPermNet_v2, pl.LightningModule):
         else:
             raise NotImplementedError()
     
+        self.use_binary_optimization_accuracy_metric = use_binary_optimization_accuracy_metric
         self.transform = transform
         self.move_data_to_cuda = move_data_to_cuda
         self.batch_size = batch_size
@@ -90,12 +92,12 @@ class LitDeepPermNet_v2(deep_perm_net_v2.DeepPermNet_v2, pl.LightningModule):
         y_hat = self(x)
 
         loss = self.loss_func(y_hat.flatten(1), y.flatten(1)).type(torch.float32)
-        # acc = sinkhorn.get_mean_accuracy(y_hat, y)
+        output = {'val_loss': loss}
 
-        output = {
-            'val_loss': loss
-            # , 'val_acc': acc
-        }
+        if self.use_binary_optimization_accuracy_metric:
+            acc = sinkhorn.get_mean_accuracy(y_hat, y)
+            output['val_acc'] = acc
+
         self.log_dict(output, prog_bar=True)
 
         return output
@@ -106,12 +108,14 @@ class LitDeepPermNet_v2(deep_perm_net_v2.DeepPermNet_v2, pl.LightningModule):
 
         for o in outputs:
             losses.append(o['val_loss'])
-            # accs.append(o['val_acc'])
+            if o.get('val_acc', None) is not None:
+                accs.append(o['val_acc'])
 
-        self.log_dict({
-            'avg_val_loss': torch.as_tensor(losses).mean()
-            # , 'avg_val_acc': torch.as_tensor(accs).mean()
-        }, prog_bar=True)
+        log = {'avg_val_loss': torch.as_tensor(losses).mean()}
+        if len(accs) > 0:
+            log['avg_val_acc'] = torch.as_tensor(accs).mean()
+
+        self.log_dict(log, prog_bar=True)
 
     def configure_optimizers(self):
         return torch.optim.Adam(filter(lambda p: p.requires_grad, self.parameters()), lr=self.lr)
@@ -166,21 +170,23 @@ if __name__ == "__main__":
         feature_extractor=feature_extractor
         , feature_size=10
         , head_size=10
-        , loss_func='l2'
-        , batch_size=8
+        , loss_func='l1'
+        , batch_size=16
         , lr=0.0003
         , mnist_path='mnist'
         , download=False
         , duplicates_multiplier=2
         , seed=42
         , disable_feature_extractor_training=True
-        , permutation_extractor_version='v2'
+        , use_binary_optimization_accuracy_metric=False
+        , permutation_extractor_version='v1'
         , bottleneck_features_num=64
         , move_data_to_cuda=False
-        , entropy_reg=1e-2
+        # , entropy_reg=1e-1
+        , use_stable_normalizer=False
     )
     
-    logger = pl.loggers.TensorBoardLogger(save_dir='./logs_deep_perm_net_v2_2', name='')
+    logger = pl.loggers.TensorBoardLogger(save_dir='./logs_deep_perm_net_v2_1', name='')
     checkpoint_callback = pl.callbacks.ModelCheckpoint(
         monitor='avg_val_loss'
         , save_top_k=1
@@ -191,9 +197,10 @@ if __name__ == "__main__":
         max_epochs=5
         , checkpoint_callback=checkpoint_callback
         , logger=logger
-        , gradient_clip_val=0.5
+        # , gradient_clip_val=0.5
         # , precision=16  # On GPU can be beneficial
         , track_grad_norm=2
         # , gpus=[0]
+        # , fast_dev_run=True
     )
     trainer.fit(model)
