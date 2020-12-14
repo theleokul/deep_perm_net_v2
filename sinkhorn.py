@@ -15,11 +15,11 @@ from cvxpylayers.torch.cvxpylayer import CvxpyLayer
 
 class SinkhornNormalizer(nn.Module):
     """
-        Numerically stable version of making matrix to double stochastic
+        Numerically stable version of casting matrix to double stochastic
         https://www.groundai.com/project/learning-permutations-with-sinkhorn-policy-gradient/1#S4.SS2
     """
 
-    def __init__(self, eps: float=1e-3, L: int=10, tau: float=0.05):
+    def __init__(self, eps: float=1e-3, L: int=100, tau: float=1):
         super().__init__()
         self.eps = eps
         self.tau = tau
@@ -38,11 +38,28 @@ class SinkhornNormalizer(nn.Module):
         return torch.exp(x) + self.eps
 
 
+class SinkhornOriginalNormalizer(nn.Module):
+    def __init__(self, eps: float=1e-3, L: int=100):
+        super().__init__()
+        self.eps = eps
+        self.L = L
+
+    def forward(self, x):
+        x += self.eps
+        for _ in range(self.L):
+            # row normalization
+            x = x / torch.sum(x, dim=-2, keepdims=True)
+            # column normalization
+            x = x / torch.sum(x, dim=-1, keepdims=True)
+
+        return x
+
+
 class SinkhornOptimizer_v1(nn.Module):
     def forward(self, X: torch.Tensor):
         return X
 
-    
+
 class SinkhornOptimizer_v2(nn.Module):
     def __init__(self, head_size: int, entropy_reg: float):
         super().__init__()
@@ -65,8 +82,9 @@ class SinkhornOptimizer_v2(nn.Module):
         
     def forward(self, X: torch.Tensor):
         output, = self.model(X)
+
         return output
-    
+
     
 class SinkhornOptimizer_v3(nn.Module):
     def __init__(self, head_size: int, entropy_reg: float):
