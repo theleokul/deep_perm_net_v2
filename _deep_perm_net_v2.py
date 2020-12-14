@@ -46,6 +46,7 @@ class DeepPermNet_v2(nn.Module):
         """
 
         features = self.feature_extractor(X)
+
         permutations = self.permutation_extractor(features)
         
         return permutations
@@ -68,6 +69,7 @@ class DeepPermNet_v2(nn.Module):
         , head_size: int
         , feature_size: int
         , bottleneck_features_num: int
+        , use_stable_normalizer: bool
         , **norm_kwargs
     ):
 
@@ -77,7 +79,8 @@ class DeepPermNet_v2(nn.Module):
             , nn.Linear(bottleneck_features_num, head_size ** 2)
             , nn.ReLU()
             , utils.Reshape((head_size,) * 2)
-            , sinkhorn.SinkhornNormalizer(**norm_kwargs)
+            , sinkhorn.SinkhornNormalizer(**norm_kwargs) if use_stable_normalizer \
+                else sinkhorn.SinkhornOriginalNormalizer(**norm_kwargs)
             , sinkhorn.SinkhornOptimizer_v1()
         )
     
@@ -87,6 +90,7 @@ class DeepPermNet_v2(nn.Module):
         , feature_size: int
         , entropy_reg: float
         , bottleneck_features_num: int
+        , use_stable_normalizer: bool
         , **norm_kwargs
     ):
 
@@ -96,7 +100,8 @@ class DeepPermNet_v2(nn.Module):
             , nn.Linear(bottleneck_features_num, head_size ** 2)
             , nn.ReLU()
             , utils.Reshape((head_size,) * 2)
-            , sinkhorn.SinkhornNormalizer(**norm_kwargs)
+            , sinkhorn.SinkhornNormalizer(**norm_kwargs) if use_stable_normalizer \
+                else sinkhorn.SinkhornOriginalNormalizer(**norm_kwargs)
             , sinkhorn.SinkhornOptimizer_v2(head_size, entropy_reg)
         )
     
@@ -105,6 +110,7 @@ class DeepPermNet_v2(nn.Module):
         , head_size: int
         , feature_size: int
         , bottleneck_features_num: int
+        , entropy_reg: float
     ):
 
         return nn.Sequential(
@@ -113,5 +119,5 @@ class DeepPermNet_v2(nn.Module):
             , nn.Linear(bottleneck_features_num, head_size ** 2)
             , nn.ReLU()
             , utils.Reshape((head_size,) * 2)
-            , sinkhorn.SinkhornOptimizer_v3()
+            , sinkhorn.SinkhornOptimizer_v3(head_size, entropy_reg)
         )
