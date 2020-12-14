@@ -32,9 +32,30 @@ class MultiHeadFeatureExtractor(nn.Module):
         
     def forward(self, X: torch.Tensor):
         batch_size, head_size, channel_size, height, width = X.shape
-        X = X.reshape(batch_size * head_size, channel_size, height, width)
+
+        # import ipdb; ipdb.set_trace()
+
+        # Move batch and head dimensions to the end
+        X = torch.movedim(X, 0, -1)
+        X = torch.movedim(X, 0, -1)
+
+        # Merge batch and head
+        X = X.reshape(channel_size, height, width, batch_size * head_size)
+
+        # Return batch dimension back
+        X = torch.movedim(X, -1, 0)
 
         output = self.feature_extractor(X)
+
+        # Expand batch and head
+        output = torch.movedim(output, 0, -1)
+        output = output.reshape(self.feature_size, batch_size, head_size)
+
+        output = torch.movedim(output, -1, 0)
+        output = torch.movedim(output, -1, 0)
+
         output = output.reshape(batch_size, head_size * self.feature_size)
+
+        # import ipdb; ipdb.set_trace()
 
         return output
